@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+    <title>SYS_SPEAR_MASTER_V1.1</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    
+    <style>
+        body { font-family: 'Space Grotesk', sans-serif; background-color: #0e0e0e; color: #ffffff; background-image: linear-gradient(rgba(0, 252, 64, 0.03) 1px, transparent 1px); background-size: 100% 3px; -webkit-text-size-adjust: 100%; min-height: max(884px, 100dvh); }
+        .glow-text { text-shadow: 0 0 10px rgba(0, 252, 64, 0.8); }
+        .scanline-box { position: relative; overflow: hidden; }
+        .scanline-box::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); background-size: 100% 2px, 3px 100%; pointer-events: none; z-index: 10; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Form elements reset for Terminal look */
+        select, input[type="number"] { background: transparent; border: none; border-bottom: 1px solid rgba(0, 252, 64, 0.3); color: #00fc40; padding: 4px 0; font-size: 12px; outline: none; appearance: none; font-weight: bold; }
+        select option { background: #131313; color: #00fc40; }
+        input:focus, select:focus { border-bottom: 1px solid #00fc40; box-shadow: 0 1px 0 0 #00fc40; }
+        input:disabled, select:disabled { opacity: 0.5; cursor: not-allowed; border-color: rgba(255, 255, 255, 0.1); color: #888; }
+        
+        input[type="range"] { -webkit-appearance: none; width: 100%; background: transparent; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 0; background: #00fc40; cursor: pointer; border: 1px solid #fff; box-shadow: 0 0 5px rgba(0,252,64,0.5); }
+        input[type="range"]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #262626; border: 1px solid #131313; }
+        input[type="range"]:disabled::-webkit-slider-thumb { background: #555; box-shadow: none; }
+        
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        /* Export Canvas (Hidden) */
+        #exportCanvas { position: absolute; left: -9999px; top: 0; width: 600px; background: #0e0e0e; color: #00fc40; padding: 20px; font-family: 'Space Grotesk', sans-serif; box-sizing: border-box; border: 2px solid #00fc40; }
+        .exp-title { font-size: 24px; font-weight: bold; border-bottom: 2px solid #00fc40; padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: baseline; text-shadow: 0 0 5px #00fc40;}
+        .exp-section { margin-bottom: 15px; border: 1px solid rgba(0, 252, 64, 0.3); padding: 10px; background: rgba(0,252,64,0.05);}
+        .exp-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px; }
+        .exp-row span:last-child { font-weight: bold; color: #fff; }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = { darkMode: "class", theme: { extend: { colors: { primary: "#9cff93", "primary-container": "#00fc40", background: "#0e0e0e", surface: "#131313", "surface-container": "#1a1919", "surface-container-high": "#201f1f", error: "#ff7351", "on-surface": "#ffffff", "on-surface-variant": "#adaaaa", "outline-variant": "#494847" } } } }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col md:flex-row antialiased selection:bg-primary-container selection:text-black">
+
+<nav class="font-['Space_Grotesk'] text-sm uppercase tracking-widest h-full w-64 fixed left-0 top-0 z-40 hidden md:flex flex-col bg-surface border-r border-outline-variant/30">
+    <div class="p-6 border-b border-outline-variant/30 flex items-center gap-3">
+        <span class="material-symbols-outlined text-primary-container font-black glow-text">terminal</span>
+        <span class="text-primary-container font-black text-lg glow-text">MH_OPS</span>
+    </div>
+    <div class="flex-1 overflow-y-auto py-4 flex flex-col gap-1">
+        <a class="flex items-center gap-3 bg-primary text-background font-bold px-4 py-3 mx-2" href="#">
+            <span class="material-symbols-outlined">settings_input_component</span> HARDWARE
+        </a>
+        <button onclick="autoOptimize()" class="w-full text-left flex items-center gap-3 text-on-surface-variant px-4 py-3 mx-2 hover:bg-surface-container hover:text-primary transition-all">
+            <span class="material-symbols-outlined">bolt</span> AUTO_SYNC
+        </button>
+        <button onclick="exportConfig()" class="w-full text-left flex items-center gap-3 text-on-surface-variant px-4 py-3 mx-2 hover:bg-surface-container hover:text-primary transition-all">
+            <span class="material-symbols-outlined">save</span> EXPORT_DAT
+        </button>
+        <button onclick="resetAll()" class="w-full text-left flex items-center gap-3 text-error px-4 py-3 mx-2 hover:bg-surface-container transition-all">
+            <span class="material-symbols-outlined">delete</span> PURGE_MEM
+        </button>
+    </div>
+    <div class="p-4 border-t border-outline-variant/30 text-xs text-on-surface-variant/50 flex justify-between items-center">
+        <span>SYS.STAT: ONLINE</span>
+        <select id="langSwitcher" onchange="changeLanguage(this.value)" class="bg-transparent border-none text-[10px] w-auto">
+            <option value="zh">ZH</option><option value="en">EN</option><option value="ja">JA</option>
+        </select>
+    </div>
+</nav>
+
+<div class="flex-1 flex flex-col md:ml-64 w-full h-screen overflow-hidden">
+    <header class="font-['Space_Grotesk'] tracking-tighter uppercase text-xs md:text-sm fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 h-12 md:h-16 md:pl-72 bg-surface border-b border-outline-variant/30 shadow-[0_0_15px_rgba(0,252,64,0.05)]">
+        <div class="flex items-center gap-3 text-primary">
+            <span class="material-symbols-outlined">radar</span>
+            <span class="font-bold tracking-widest uppercase glow-text" data-i18n="app_name">SYS_SPEAR_MASTER_V1.1</span>
+        </div>
+        <div class="flex items-center gap-4 text-[10px] text-primary animate-pulse">
+            DATA_LINK_SECURE
+        </div>
+    </header>
+
+    <main class="flex-1 mt-12 md:mt-16 mb-[60px] md:mb-0 p-4 md:p-6 overflow-y-auto no-scrollbar pb-24">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 max-w-7xl mx-auto">
+            
+            <div class="col-span-1 md:col-span-12 bg-surface-container p-4 border-l-2 border-primary scanline-box">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h1 class="text-xl text-primary font-bold uppercase tracking-widest glow-text">TARGET_ACQ_MODULE</h1>
+                        <p class="text-[10px] text-on-surface-variant uppercase mt-1">LAT: 34.0522° N | LNG: 118.2437° W | PHYSICS: ENABLED</p>
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <span class="w-2 h-2 bg-primary-container animate-pulse shadow-[0_0_8px_#00fc40]"></span>
+                        <span class="text-xs text-primary-container uppercase font-bold tracking-wider">SYNCED</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-span-1 md:col-span-4 flex flex-col gap-4">
+                
+                <div class="bg-surface p-4 border border-outline-variant/30 relative group">
+                    <h2 class="text-xs font-bold text-on-surface uppercase tracking-wider mb-4 border-b border-outline-variant/30 pb-2 text-primary">CORE_ARCHITECTURE</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <label class="text-[10px] text-on-surface-variant uppercase tracking-widest" data-i18n="gun_length">BARREL_LEN [CM]</label>
+                                <span class="text-primary font-bold text-sm glow-text" id="gunLenVal">100 cm</span>
+                            </div>
+                            <input type="range" id="gunLen" min="60" max="150" step="5" value="100" oninput="dynamicLimit(true); updateAll();">
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-[10px] text-on-surface-variant uppercase tracking-widest block mb-1" data-i18n="sys_type">SYS_TYPE</label>
+                                <select id="sysType" onchange="updateSysUI(); dynamicLimit(true); updateAll();" class="w-full">
+                                    <option value="standard" data-i18n="opt_standard">Standard</option>
+                                    <option value="roller" data-i18n="opt_roller">Roller</option>
+                                    <option value="double_roller" data-i18n="opt_double_roller">Double Roller</option>
+                                    <option value="invert" data-i18n="opt_invert">Invert</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-on-surface-variant uppercase tracking-widest block mb-1" data-i18n="gun_shape">SHAPE</label>
+                                <select id="gunShape" onchange="updateAll()" class="w-full">
+                                    <option value="al_tube" data-i18n="shape_al">AL Tube</option>
+                                    <option value="carbon_cuttlefish" selected data-i18n="shape_carbon">Carbon CF</option>
+                                    <option value="wood_cuttlefish" data-i18n="shape_wood_c">Wood CF</option>
+                                    <option value="wood_block" data-i18n="shape_wood_b">Wood Block</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-surface p-4 border border-outline-variant/30">
+                    <h2 class="text-xs font-bold text-on-surface uppercase tracking-wider mb-4 border-b border-outline-variant/30 pb-2 text-primary">PROPULSION_MATRIX</h2>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-[10px] text-on-surface-variant uppercase tracking-widest block mb-1" data-i18n="band_brand">BRAND</label>
+                                <select id="bandBrand" onchange="updateModels(); updateAll();" class="w-full"><option value="sigalsub" selected>Sigalsub</option><option value="primeline">Primeline</option><option value="roballen">Rob Allen</option></select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-on-surface-variant uppercase tracking-widest block mb-1" data-i18n="band_model">MODEL/DIA</label>
+                                <select id="bandModel" onchange="updateAll()" class="w-full"></select>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div id="uiStandard">
+                                <label class="text-[10px] text-on-surface-variant uppercase block mb-1" data-i18n="band_count">COUNT</label>
+                                <select id="stdCount" onchange="updateAll()" class="w-full"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select>
+                            </div>
+                            <div id="uiRoller" style="display:none;"><label class="text-[10px] text-on-surface-variant uppercase block mb-1">COUNT</label><select disabled class="w-full"><option>1 MAIN</option></select></div>
+                            <div id="uiDoubleRoller" style="display:none;"><label class="text-[10px] text-on-surface-variant uppercase block mb-1">COUNT</label><select disabled class="w-full"><option>2 MAIN</option></select></div>
+                            <div id="uiInvert" style="display:none;">
+                                <label class="text-[10px] text-on-surface-variant uppercase block mb-1" data-i18n="invert_sub">SUB_COUNT</label>
+                                <select id="invSubCount" onchange="updateAll()" class="w-full"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select>
+                            </div>
+                            
+                            <div>
+                                <label class="text-[10px] text-on-surface-variant uppercase block mb-1" data-i18n="wishbone">WISHBONE (AUTO: <input type="checkbox" id="autoWishbone" checked onchange="updateAll()" style="accent-color: #00fc40;">)</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="range" id="wishboneLen" min="0" max="25" step="1" value="10" oninput="document.getElementById('autoWishbone').checked = false; updateAll();">
+                                    <span id="wishboneLenVal" class="text-xs text-primary font-bold">10</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="uiExtension" style="display:none;">
+                            <label class="text-[10px] text-on-surface-variant uppercase block mb-1" data-i18n="ext_line">EXT_LINE (AUTO: <input type="checkbox" id="autoExt" checked onchange="updateAll()" style="accent-color: #00fc40;">)</label>
+                            <div class="flex items-center gap-2">
+                                <input type="range" id="extLen" min="0" max="80" step="1" value="10" oninput="document.getElementById('autoExt').checked = false; updateAll();">
+                                <span id="extLenVal" class="text-xs text-primary font-bold">10</span>
+                            </div>
+                        </div>
+
+                        <div class="p-2 border border-error/30 bg-error/5 relative mt-2">
+                            <label class="text-[10px] text-error uppercase flex justify-between">
+                                <span data-i18n="tuning_mode">INV_TUNING (REV_CALC)</span>
+                                <input type="checkbox" id="lockBand" onchange="toggleTuningMode(); updateAll();" style="accent-color: #ff7351;">
+                            </label>
+                            <div id="tuningInputs" style="display:none; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+                                <div><label class="text-[9px] text-error">MAIN_CUT(CM)</label><input type="number" id="inputMainBand" value="50" step="1" oninput="updateAll()" class="w-full !border-error !text-error"></div>
+                                <div id="tuningSubBox" style="display:none;"><label class="text-[9px] text-error">SUB_CUT(CM)</label><input type="number" id="inputSubBand" value="40" step="1" oninput="updateAll()" class="w-full !border-error !text-error"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <label class="text-[10px] text-on-surface-variant uppercase tracking-widest" data-i18n="stretch_ratio">STRETCH_RATIO</label>
+                                <span class="text-primary font-bold text-sm glow-text" id="stretchRatioVal">3.3 x</span>
+                            </div>
+                            <input type="range" id="stretchRatio" min="2.0" max="5.0" step="0.1" value="3.3" oninput="updateAll()">
+                            <span id="ratioWarnTxt" class="text-[10px] text-error mt-1 block"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-surface p-4 border border-outline-variant/30">
+                    <h2 class="text-xs font-bold text-on-surface uppercase tracking-wider mb-4 border-b border-outline-variant/30 pb-2 text-primary">MUNITION_PAYLOAD</h2>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-[10px] text-on-surface-variant uppercase tracking-widest block mb-1">DIA [MM] <span id="shaftWarnTxt" class="text-error text-[8px]"></span></label>
+                                <select id="shaftDia" onchange="updateAll()" class="w-full"><option value="6.5">6.5</option><option value="7.0" selected>7.0</option><option value="7.5">7.5</option><option value="8.0">8.0</option></select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-on-surface-variant uppercase tracking-widest block mb-1" data-i18n="flopper">FLOPPER</label>
+                                <select id="flopperType" onchange="dynamicLimit(true); updateAll();" class="w-full"><option value="top">Top</option><option value="bottom" selected>Bottom</option><option value="double">Double</option><option value="slip">Slip Tip</option></select>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <label class="text-[10px] text-on-surface-variant uppercase tracking-widest">SHAFT_LEN <span id="shaftHintTxt" class="text-[8px] text-on-surface-variant/50 ml-2"></span></label>
+                                <span class="text-primary font-bold text-sm glow-text" id="shaftLenVal">130 cm</span>
+                            </div>
+                            <input type="range" id="shaftLen" step="5" oninput="document.getElementById('shaftLenWarn').style.display='none'; updateAll();">
+                            <span id="shaftLenWarn" style="display:none;" class="text-[10px] text-error"></span>
+                        </div>
+                        
+                        <div class="pt-2 border-t border-outline-variant/30">
+                            <label class="text-[10px] text-on-surface-variant uppercase tracking-widest block mb-1" data-i18n="reel">REEL_MOD</label>
+                            <select id="hasReel" onchange="toggleReelUI(); updateAll();" class="w-full mb-2"><option value="no" selected>No Reel</option><option value="yes">Attached</option></select>
+                            <div id="uiReelConfig" style="display:none;" class="grid grid-cols-2 gap-4">
+                                <select id="reelCap" onchange="updateAll()" class="w-full text-xs"><option value="30">30m</option><option value="50" selected>50m</option><option value="70">70m</option></select>
+                                <select id="reelLine" onchange="updateAll()" class="w-full text-xs"><option value="1.5" selected>1.5mm</option><option value="2.0">2.0mm</option></select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-span-1 md:col-span-8 flex flex-col gap-4">
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div class="bg-surface-container p-3 border-l-[3px] border-primary">
+                        <p class="text-[10px] text-on-surface-variant uppercase">OVERALL_SCORE</p>
+                        <p class="text-3xl text-primary font-bold mt-1 glow-text" id="resScore">0</p>
+                        <p class="text-[9px] text-primary/70 uppercase mt-1" id="resRatingDesc">-</p>
+                    </div>
+                    <div class="bg-surface-container p-3 border-l-[3px] border-primary">
+                        <p class="text-[10px] text-on-surface-variant uppercase">EST_THRUST</p>
+                        <p class="text-2xl text-on-surface font-bold mt-1" id="resForce">0 <span class="text-xs text-on-surface-variant font-normal">KG</span></p>
+                        <p class="text-[9px] text-on-surface-variant uppercase mt-1">MASS: <span id="resWeight"></span> KG</p>
+                    </div>
+                    <div class="bg-surface-container p-3 border-l-[3px] border-primary">
+                        <p class="text-[10px] text-on-surface-variant uppercase">VELOCITY_@4M</p>
+                        <p class="text-2xl text-on-surface font-bold mt-1" id="liveSpeed">0.0 <span class="text-xs text-on-surface-variant font-normal">M/S</span></p>
+                        <p class="text-[9px] text-on-surface-variant uppercase mt-1">IMPACT_E: <span id="liveEnergy" class="text-primary font-bold">0</span> J</p>
+                    </div>
+                    <div class="bg-surface-container p-3 border-l-[3px] border-error">
+                        <p class="text-[10px] text-error/80 uppercase">DROP_CALC</p>
+                        <p class="text-2xl text-error font-bold mt-1 glow-text" id="liveDrop">0.0 <span class="text-xs text-error/70 font-normal">CM</span></p>
+                        <p class="text-[9px] text-error uppercase mt-1 w-full truncate" id="aimGuideTxt">-</p>
+                    </div>
+                </div>
+
+                <div class="bg-surface p-4 border border-outline-variant/30 flex-1 min-h-[250px] relative scanline-box flex flex-col">
+                    <h2 class="text-xs font-bold text-on-surface uppercase tracking-wider mb-2 border-b border-outline-variant/30 pb-2 text-primary">BALLISTIC_TRAJECTORY_PLOT</h2>
+                    <div id="chartContainer" class="flex-1 w-full relative mt-2 border-l border-b border-outline-variant/50">
+                        <canvas id="trajCanvas"></canvas>
+                    </div>
+                    <div class="mt-4 flex items-center gap-4">
+                        <span class="text-[10px] text-primary uppercase">SCRUB_DIST [M]:</span>
+                        <input type="range" id="distScrubber" min="0" max="10" step="0.1" value="5" oninput="updateScrubber()" class="flex-1">
+                        <span class="text-sm font-bold text-primary w-8 text-right glow-text" id="scrubDistTxt">5.0</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-surface p-4 border border-outline-variant/30 flex flex-col items-center justify-center relative min-h-[220px] scanline-box">
+                        <div class="absolute top-2 left-2 text-[8px] text-primary uppercase">RADAR_SWEEP // ACTIVE</div>
+                        <div class="w-full h-full" id="radarWrap"><canvas id="radarCanvas"></canvas></div>
+                        <div class="absolute bottom-2 w-full px-4 flex justify-between text-[8px] text-on-surface-variant">
+                            <span>MAIN_CUT: <strong id="resCutLen" class="text-primary"></strong></span>
+                            <span id="resSubLenBox" style="display:none;">SUB_CUT: <strong id="resSubLen" class="text-primary"></strong></span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-surface p-4 border border-outline-variant/30 flex flex-col">
+                        <h3 class="text-[10px] font-bold text-primary uppercase tracking-wider mb-2 border-b border-outline-variant/30 pb-1">SYS_LOGS</h3>
+                        <div id="sysLogs" class="flex-1 space-y-1 overflow-hidden font-mono text-[9px] flex flex-col-reverse">
+                            </div>
+                    </div>
+                </div>
+                
+                <div style="display:none;">
+                    <span id="idxPain"></span><span id="idxRecoil"></span><span id="idxSwing"></span><span id="idxBuoy"></span><span id="idxPort"></span>
+                    <span id="eRcl"></span><span id="eBuy"></span><span id="eSwg"></span><span id="ePan"></span><span id="eEgy"></span><span id="eDrp"></span>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="exportCanvas">
+    <div class="exp-title">
+        <span data-i18n="exp_title">MH_OPS TACTICAL DATASHEET</span>
+        <div style="text-align:right;">
+            <div style="font-size:36px; font-weight:900; color:#00fc40; line-height:1; text-shadow:0 0 10px #00fc40;" id="expScoreVal">0</div>
+            <div style="font-size:10px; color:#fff;" data-i18n="total_score">COMBAT RATING</div>
+        </div>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid #00fc40; padding:10px; background:#131313; margin-bottom:15px;">
+        <img id="expRadarImg" style="width:130px; height:130px;">
+        <div style="flex:1; padding-left:15px; font-size:12px; line-height:1.6;">
+            <div><strong data-i18n="idx_recoil" style="color:#00fc40">RECOIL</strong>: <span id="eRclOut"></span> | <strong data-i18n="idx_buoy" style="color:#00fc40">BUOYANCY</strong>: <span id="eBuyOut"></span></div>
+            <div><strong data-i18n="idx_swing" style="color:#00fc40">SWING</strong>: <span id="eSwgOut"></span> | <strong data-i18n="idx_pain" style="color:#00fc40">LOAD</strong>: <span id="ePanOut"></span></div>
+            <div style="margin-top:5px; color:#ff7351; font-weight:bold;">4M_IMPACT: <span id="eEgyOut"></span> J | DROP: <span id="eDrpOut"></span> CM</div>
+        </div>
+    </div>
+    <div class="exp-section">
+        <div class="exp-row"><span data-i18n="exp_gun" style="color:#00fc40">SYS_ARCH:</span> <span id="expGun">-</span></div>
+        <div class="exp-row"><span data-i18n="exp_weight" style="color:#00fc40">MASS:</span> <span id="expWeight">-</span></div>
+    </div>
+    <div class="exp-section">
+        <div class="exp-row"><span data-i18n="exp_band" style="color:#00fc40">BANDS:</span> <span id="expBandModel">-</span></div>
+        <div class="exp-row"><span data-i18n="exp_ratio" style="color:#00fc40">RATIO/CUT:</span> <span id="expBandData">-</span></div>
+        <div class="exp-row"><span data-i18n="exp_thrust" style="color:#00fc40">THRUST:</span> <span id="expForce">-</span></div>
+    </div>
+    <div class="exp-section">
+        <div class="exp-row"><span data-i18n="exp_shaft" style="color:#00fc40">PAYLOAD:</span> <span id="expShaft">-</span></div>
+    </div>
+    <div style="font-size:10px; color:#888; text-align:right; margin-top:10px;">GENERATED BY MH_OPS TERMINAL</div>
+</div>
+
+<script>
+// --- PHYSICS ENGINE & LOGIC (Untouched Core, Adapted Hooks) ---
+const translations = {
+    zh: { app_name: "MH_OPS 终端", btn_optimize: "⚡ 智能配置", btn_export: "📸 导出数据", gun_length: "拉距(CM)", sys_type: "架构", opt_standard: "传统皮筋", opt_roller: "单滚轮", opt_double_roller: "双滚轮", opt_invert: "逆变", gun_shape: "截面", shape_al: "铝管", shape_carbon: "碳纤", shape_wood_c: "木质CF", shape_wood_b: "木质方体", band_count: "组数", invert_sub: "副组数", reel: "线轮", no: "无", yes: "有", wishbone: "叉骨", ext_line: "延长线", auto: "自动", reel_cap: "线长", reel_line: "线径", band_brand: "厂牌", band_model: "规格", shaft_dia: "箭径(MM)", flopper: "倒刺", flopper_top: "上", flopper_bottom: "下", flopper_double: "双", flopper_slip: "滑套", shaft_len: "箭长", tuning_mode: "现货调校", lock_band: "LOCK", input_main_band: "主裁长", input_sub_band: "副裁长", stretch_ratio: "拉伸比", cut_main: "主裁长:", cut_sub: "副:", total_score: "综评", thrust: "推力", weight_buoy: "质量", idx_pain: "装填", idx_recoil: "后坐", idx_swing: "摆动", idx_buoy: "浮力", idx_port: "便携", scrub_tip: "预瞄", dist: "距", drop: "坠", speed: "速", energy: "能", exp_title: "MH_OPS 数据单", exp_gun: "架构:", exp_weight: "质量:", exp_band: "动力:", exp_ratio: "参数:", exp_thrust: "推力:", exp_shaft: "弹药:", warn_weak: "动力弱", warn_break: "易断", warn_bend: "易变", aim_warn: "WARN: 弹箭风险", aim_0: "AIM: 直指核心", aim_1: "AIM: 瞄准背鳍", aim_2: "AIM: 抬高 {0}CM" },
+    en: { app_name: "MH_OPS TERMINAL", btn_optimize: "AUTO_SYNC", btn_export: "EXPORT_DAT", gun_length: "BARREL_LEN", sys_type: "ARCH", opt_standard: "Standard", opt_roller: "Roller", opt_double_roller: "D-Roller", opt_invert: "Invert", gun_shape: "SHAPE", shape_al: "AL Tube", shape_carbon: "Carbon CF", shape_wood_c: "Wood CF", shape_wood_b: "Wood Block", band_count: "BANDS", invert_sub: "SUB_BANDS", reel: "REEL", no: "NO", yes: "YES", wishbone: "WISHBONE", ext_line: "EXT_LINE", auto: "AUTO", reel_cap: "CAP", reel_line: "LINE", band_brand: "BRAND", band_model: "SPEC", shaft_dia: "DIA(MM)", flopper: "FLOPPER", flopper_top: "Top", flopper_bottom: "Bottom", flopper_double: "Double", flopper_slip: "Slip Tip", shaft_len: "SHAFT_LEN", tuning_mode: "REV_CALC", lock_band: "LOCK", input_main_band: "MAIN_CUT", input_sub_band: "SUB_CUT", stretch_ratio: "RATIO", cut_main: "M_CUT:", cut_sub: "S:", total_score: "SCORE", thrust: "THRUST", weight_buoy: "MASS", idx_pain: "LOAD", idx_recoil: "RECOIL", idx_swing: "SWING", idx_buoy: "BUOY", idx_port: "PORT", scrub_tip: "SCRUB", dist: "DST", drop: "DRP", speed: "SPD", energy: "ENG", exp_title: "MH_OPS DATASHEET", exp_gun: "ARCH:", exp_weight: "MASS:", exp_band: "PROPULSION:", exp_ratio: "PARAM:", exp_thrust: "THRUST:", exp_shaft: "PAYLOAD:", warn_weak: "WEAK", warn_break: "BREAK", warn_bend: "BEND", aim_warn: "WARN: BOUNCE RISK", aim_0: "AIM: CENTER MASS", aim_1: "AIM: TOP EDGE", aim_2: "AIM: RAISE {0}CM" },
+    ja: { app_name: "MH_OPS 端末", btn_optimize: "自動同期", btn_export: "出力", gun_length: "銃身長", sys_type: "システム", opt_standard: "標準", opt_roller: "ローラー", opt_double_roller: "Wローラー", opt_invert: "インバート", gun_shape: "形状", shape_al: "アルミ", shape_carbon: "カーボン", shape_wood_c: "木製CF", shape_wood_b: "木塊", band_count: "ゴム数", invert_sub: "副ゴム", reel: "リール", no: "無", yes: "有", wishbone: "ウィッシュボーン", ext_line: "延長線", auto: "自動", reel_cap: "容量", reel_line: "線径", band_brand: "メーカ", band_model: "規格", shaft_dia: "径(MM)", flopper: "カエシ", flopper_top: "上", flopper_bottom: "下", flopper_double: "W", flopper_slip: "チョッキ", shaft_len: "全長", tuning_mode: "逆算", lock_band: "固定", input_main_band: "主ゴム", input_sub_band: "副ゴム", stretch_ratio: "伸張率", cut_main: "主:", cut_sub: "副:", total_score: "評価", thrust: "推力", weight_buoy: "質量", idx_pain: "装填", idx_recoil: "反動", idx_swing: "旋回", idx_buoy: "浮力", idx_port: "携帯", scrub_tip: "照準", dist: "距", drop: "落", speed: "速", energy: "力", exp_title: "MH_OPS データ", exp_gun: "骨格:", exp_weight: "質量:", exp_band: "動力:", exp_ratio: "数値:", exp_thrust: "推力:", exp_shaft: "弾薬:", warn_weak: "力不足", warn_break: "切断", warn_bend: "湾曲", aim_warn: "警告: 貫通不能", aim_0: "照準: 中央", aim_1: "照準: 上部", aim_2: "照準: 上へ {0}CM" }
+};
+let currentLang = 'en';
+const bandDB = {"primeline": [{name: "14mm S-ID", val: "14,1.13"}, {name: "16mm S-ID", val: "16,1.15", sel:true}, {name: "17.5mm S-ID", val: "17.5,1.16"}], "sigalsub": [{name: "14.5mm Ext", val: "14.5,1.18"}, {name: "16mm Ext", val: "16,1.20", sel:true}, {name: "17.5mm Ext", val: "17.5,1.22"}], "roballen": [{name: "14mm Blue", val: "14,1.05"}, {name: "16mm Blue", val: "16,1.06", sel:true}]};
+let trajData = []; let currentScore = 0; let logCount = 0;
+
+function sysLog(msg, isWarn=false) {
+    const box = document.getElementById('sysLogs');
+    const t = new Date().toLocaleTimeString('en-US', {hour12:false});
+    const c = isWarn ? 'text-error' : 'text-primary';
+    const html = `<div class="flex gap-2"><span class="${c}/70">[${t}]</span><span class="${c}">${msg}</span></div>`;
+    box.insertAdjacentHTML('afterbegin', html);
+    if(box.children.length > 6) box.lastChild.remove();
+}
+
+function t(key, ...args) { let text = translations[currentLang][key] || key; args.forEach((v,i) => text=text.replace(`{${i}}`,v)); return text; }
+function changeLanguage(l) { currentLang = l; document.querySelectorAll('[data-i18n]').forEach(e => e.innerText = t(e.getAttribute('data-i18n'))); sysLog("LANG_SET: "+l.toUpperCase()); updateAll(); }
+
+function initUI() { updateModels(); document.getElementById('bandModel').value = '16,1.20'; updateSysUI(); dynamicLimit(true); changeLanguage('en'); sysLog("SYS_BOOT_SEQUENCE_OK"); }
+
+function resetAll() { document.getElementById('gunLen').value = 100; document.getElementById('sysType').value = 'standard'; document.getElementById('gunShape').value = 'carbon_cuttlefish'; document.getElementById('stdCount').value = '2'; document.getElementById('hasReel').value = 'no'; document.getElementById('autoWishbone').checked = true; document.getElementById('autoExt').checked = true; document.getElementById('lockBand').checked = false; toggleTuningMode(); toggleReelUI(); document.getElementById('bandBrand').value = 'sigalsub'; updateModels(); document.getElementById('bandModel').value = '16,1.20'; document.getElementById('stretchRatio').value = 3.3; document.getElementById('shaftDia').value = '7.0'; dynamicLimit(true); updateSysUI(); sysLog("MEM_PURGED"); updateAll(); }
+
+function toggleTuningMode() { const L = document.getElementById('lockBand').checked; document.getElementById('stretchRatio').disabled = L; document.getElementById('tuningInputs').style.display = L ? 'grid' : 'none'; document.getElementById('tuningSubBox').style.display = (L && document.getElementById('sysType').value === 'invert') ? 'block' : 'none'; if(L) sysLog("REV_CALC_MODE_ENGAGED", true); }
+function toggleReelUI() { document.getElementById('uiReelConfig').style.display = document.getElementById('hasReel').value === 'yes' ? 'grid' : 'none'; }
+function dynamicLimit(f) { const gl=parseFloat(document.getElementById('gunLen').value), fl=document.getElementById('flopperType').value; let min=gl+20+((fl==='double'||fl==='slip')?5:0), rec=min+10; const s=document.getElementById('shaftLen'); s.min=min; s.max=gl+60; document.getElementById('shaftHintTxt').innerText=`[MIN:${min}]`; if(f||parseFloat(s.value)<min||!s.value){ s.value=rec; document.getElementById('shaftLenWarn').style.display='inline';} }
+
+function autoOptimize() { document.getElementById('lockBand').checked=false; toggleTuningMode(); const gl=parseFloat(document.getElementById('gunLen').value), s=document.getElementById('sysType').value; document.getElementById('bandBrand').value='sigalsub'; updateModels(); document.getElementById('flopperType').value='bottom'; document.getElementById('autoWishbone').checked=true; document.getElementById('autoExt').checked=true; if(s==='standard'){ document.getElementById('stdCount').value=gl<=85?'1':'2'; document.getElementById('bandModel').value=gl<=110&&gl>85?'14.5,1.18':'16,1.20'; document.getElementById('shaftDia').value=gl<=85?'6.5':(gl>110?'7.5':'7.0'); document.getElementById('stretchRatio').value=gl<=110&&gl>85?3.5:3.4; }else{ document.getElementById('bandModel').value=s==='double_roller'?'14.5,1.18':'16,1.20'; document.getElementById('shaftDia').value=gl>110?'8.0':'7.5'; document.getElementById('stretchRatio').value=3.6; } document.getElementById('shaftLen').value=gl+(s==='standard'?30:20); document.getElementById('shaftLenWarn').style.display='none'; dynamicLimit(false); updateSysUI(); sysLog("AUTO_SYNC_COMPLETE"); updateAll(); }
+
+function updateSysUI() { const s=document.getElementById('sysType').value; document.getElementById('uiStandard').style.display=s==='standard'?'block':'none'; document.getElementById('uiRoller').style.display=s==='roller'?'block':'none'; document.getElementById('uiDoubleRoller').style.display=s==='double_roller'?'block':'none'; document.getElementById('uiInvert').style.display=s==='invert'?'block':'none'; document.getElementById('uiExtension').style.display=s!=='standard'?'block':'none'; toggleTuningMode(); }
+function updateModels() { const b=document.getElementById('bandBrand').value, ms=document.getElementById('bandModel'); ms.innerHTML=''; bandDB[b].forEach(m=>{ let o=document.createElement('option'); o.value=m.val; o.innerText=m.name; if(m.sel) o.selected=true; ms.appendChild(o); }); }
+
+function updateAll() {
+    logCount++;
+    const gl=parseFloat(document.getElementById('gunLen').value); document.getElementById('gunLenVal').innerText=gl;
+    const sl=parseFloat(document.getElementById('shaftLen').value); document.getElementById('shaftLenVal').innerText=sl;
+    const sys=document.getElementById('sysType').value;
+    let wl=parseFloat(document.getElementById('wishboneLen').value); if(document.getElementById('autoWishbone').checked){ wl=10; document.getElementById('wishboneLen').value=wl; } document.getElementById('wishboneLenVal').innerText=wl;
+    let el=parseFloat(document.getElementById('extLen').value); if(sys!=='standard'&&document.getElementById('autoExt').checked){ el=sys==='invert'?Math.round(gl*0.25):Math.round(gl*0.1); document.getElementById('extLen').value=el; }else if(sys==='standard')el=0; document.getElementById('extLenVal').innerText=el;
+    
+    const bd=document.getElementById('bandModel').value.split(','), bDia=parseFloat(bd[0]), bEla=parseFloat(bd[1]);
+    const L=document.getElementById('lockBand').checked;
+    let rM=parseFloat(document.getElementById('stretchRatio').value), rS=rM, cM=0, cS=0;
+
+    if(L){ cM=parseFloat(document.getElementById('inputMainBand').value)||1; if(sys==='standard') rM=((gl-wl)*2)/cM; else if(sys==='invert') rM=Math.max(5,gl-wl-el)/cM; else rM=Math.max(5,gl*2+10-wl-el)/cM; if(sys==='invert'){ cS=parseFloat(document.getElementById('inputSubBand').value)||1; rS=(gl*1.6)/cS; } document.getElementById('stretchRatio').value=rM.toFixed(1);
+    }else{ cM=sys==='standard'?((gl-wl)*2)/rM:(sys==='invert'?Math.max(5,gl-wl-el)/rM:Math.max(5,gl*2+10-wl-el)/rM); cS=sys==='invert'?(gl*1.6)/rS:0; }
+    
+    document.getElementById('stretchRatioVal').innerText=rM.toFixed(1)+"x";
+    let rw="", rVeto=false; if(rM<2.5){ rw="["+t('warn_weak')+"]"; rVeto=true; }else if(rM>3.8){ rw="["+t('warn_break')+"]"; rVeto=true; } document.getElementById('ratioWarnTxt').innerText=rw;
+    document.getElementById('resCutLen').innerText=cM.toFixed(1); document.getElementById('resSubLenBox').style.display=sys==='invert'?'inline':'none'; if(sys==='invert') document.getElementById('resSubLen').innerText=cS.toFixed(1);
+
+    let fM=Math.pow(bDia/16,2)*(rM/3.3)*bEla*50, tF=0;
+    if(sys==='standard') tF=fM*parseInt(document.getElementById('stdCount').value); else if(sys==='roller') tF=fM; else if(sys==='double_roller') tF=fM*2; else if(sys==='invert'){ let fS=Math.pow(bDia/16,2)*(rS/3.3)*bEla*50; tF=fM+(fS*parseInt(document.getElementById('invSubCount').value)); }
+    document.getElementById('resForce').innerText=tF.toFixed(0);
+
+    const sd=parseFloat(document.getElementById('shaftDia').value); let sVeto=false; if(tF>50&&sd<=6.5){ document.getElementById('shaftWarnTxt').innerText=t('warn_bend'); sVeto=true; }else document.getElementById('shaftWarnTxt').innerText="";
+
+    const rho=1025, sm=Math.PI*Math.pow(sd/2000,2)*(sl/100)*7750, gs=document.getElementById('gunShape').value; let gv=0, gd=0;
+    if(gs==='al_tube'){ gv=Math.PI*Math.pow(0.014,2)*(gl/100); gd=800; } if(gs==='carbon_cuttlefish'){ gv=0.05*0.03*0.8*(gl/100); gd=600; } if(gs==='wood_cuttlefish'){ gv=0.05*0.035*0.8*(gl/100); gd=720; } if(gs==='wood_block'){ gv=0.06*0.04*(gl/100); gd=750; }
+    let tm=gv*gd+0.4+sm+(sys.includes('roller')?0.2:0)+(sys==='invert'?0.3:0);
+    if(document.getElementById('hasReel').value==='yes') tm+=0.15+(parseInt(document.getElementById('reelCap').value)*(parseFloat(document.getElementById('reelLine').value)===1.5?0.0015:0.0025));
+    let bal=(gv*rho)-tm>0.15?(gv*rho)-tm:0; tm+=bal; document.getElementById('resWeight').innerText=tm.toFixed(2);
+
+    let iP=Math.max(1,Math.min(10,Math.round(11-(Math.pow(bDia/16,2)*(rM/3.0)*(gl/100)*5)*(sys==='invert'?0.5:1))));
+    let iR=Math.max(1,Math.min(10,Math.round(11-((tF/50)*(sm/0.4)/(tm+1.5))*(sys==='invert'?0.2:(sys==='double_roller'?1.5:(sys==='roller'?0.8:1.0)))*4)));
+    let iS=Math.max(1,Math.min(10,Math.round(10-((gl-60)/20)-(gs==='al_tube'?0:(gs==='carbon_cuttlefish'?0.5:2.5))+(sys==='invert'?2:0)-(document.getElementById('hasReel').value==='yes'?1:0))));
+    let iB=Math.max(1,Math.min(10,Math.round(10-Math.abs(((gv*rho)-tm)*15))));
+    let iPt=Math.max(1,Math.min(10,Math.round(15-(sl/30)-(tm*1.2))));
+
+    // Store for export
+    document.getElementById('idxPain').innerText=iP; document.getElementById('idxRecoil').innerText=iR; document.getElementById('idxSwing').innerText=iS; document.getElementById('idxBuoy').innerText=iB; document.getElementById('idxPort').innerText=iPt;
+
+    let wd=Math.max(0.1,(gl-wl)/100), eng=tF*9.81*wd*0.5*(sys.includes('roller')?1.4:(sys==='invert'?1.5:1.0)), v0=Math.sqrt(2*eng/sm)*0.7;
+    trajData=[]; let cV=v0, cT=0, e4=0, d4=0, bDrag=0.5*rho*Math.PI*Math.pow(sd/2000,2)*0.05*(document.getElementById('flopperType').value==='slip'?1.25:1.0), gE=9.81*(1-rho/7750)*(document.getElementById('flopperType').value==='top'?0.92:1.08);
+    
+    for(let x=0;x<=10;x+=0.1){ cV-=(bDrag/sm)*cV*cV*0.1; if(cV<0)cV=0; if(cV>0)cT+=0.1/cV; let d=0.5*gE*cT*cT*100, e=0.5*sm*cV*cV; trajData.push({dist:x,drop:d,speed:cV,energy:e}); if(Math.abs(x-4.0)<0.05){e4=e;d4=d;} }
+
+    let twr=tF/sm, sc=0;
+    if(rVeto||sVeto){ sc=Math.floor(Math.random()*10+25); document.getElementById('resScore').className="text-3xl text-error font-bold mt-1 glow-text"; document.getElementById('resRatingDesc').innerText="FATAL_ERR_DETECTED"; document.getElementById('resRatingDesc').className="text-[9px] text-error uppercase mt-1"; }
+    else{
+        sc=Math.min(100,Math.round(Math.min(15,(e4/30)*15)+Math.min(15,(5/Math.max(0.1,d4))*15)+(iR/10)*20+(iB/10)*20+Math.max(0,15-Math.abs(twr-250)/10)+(iS/10)*15));
+        document.getElementById('resScore').className="text-3xl font-bold mt-1 glow-text text-primary"; document.getElementById('resRatingDesc').className="text-[9px] uppercase mt-1 text-primary";
+        if(sc>=90) document.getElementById('resRatingDesc').innerText="CLASS: S [LEGENDARY]"; else if(sc>=75) document.getElementById('resRatingDesc').innerText="CLASS: A [PRO]"; else if(sc>=60) document.getElementById('resRatingDesc').innerText="CLASS: B [BALANCED]"; else document.getElementById('resRatingDesc').innerText="CLASS: C [IMBALANCED]";
+    }
+    currentScore=sc; document.getElementById('resScore').innerText=sc;
+    
+    if(logCount % 2 === 0) sysLog(`RECALC_OK: F=${tF.toFixed(0)}KG, E=${e4.toFixed(0)}J`);
+    drawRadar([iP,iR,iS,iB,iPt]); drawCanvas(); updateScrubber(); prepareExportData();
+}
+
+function drawRadar(v=[1,1,1,1,1]) {
+    const cvs=document.getElementById('radarCanvas'), ctx=cvs.getContext('2d'), dpr=window.devicePixelRatio||1, bw=cvs.parentElement.clientWidth, bh=cvs.parentElement.clientHeight;
+    cvs.width=bw*dpr; cvs.height=bh*dpr; ctx.scale(dpr,dpr); ctx.clearRect(0,0,bw,bh); const cx=bw/2, cy=bh/2, r=Math.min(bw,bh)/2.5 - 10;
+    ctx.strokeStyle='#494847'; ctx.lineWidth=1;
+    for(let i=1;i<=5;i++){ ctx.beginPath(); for(let j=0;j<5;j++){ let a=-Math.PI/2+(Math.PI*2/5)*j, px=cx+Math.cos(a)*(r*i/5), py=cy+Math.sin(a)*(r*i/5); j===0?ctx.moveTo(px,py):ctx.lineTo(px,py); } ctx.closePath(); ctx.stroke(); }
+    ctx.beginPath(); ctx.fillStyle='rgba(0, 252, 64, 0.2)'; ctx.strokeStyle='#00fc40'; ctx.lineWidth=1.5;
+    for(let j=0;j<5;j++){ let a=-Math.PI/2+(Math.PI*2/5)*j, px=cx+Math.cos(a)*(r*v[j]/10), py=cy+Math.sin(a)*(r*v[j]/10); j===0?ctx.moveTo(px,py):ctx.lineTo(px,py); }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    const L=[t('idx_pain'),t('idx_recoil'),t('idx_swing'),t('idx_buoy'),t('idx_port')]; ctx.font='bold 9px "Space Grotesk", sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    for(let j=0;j<5;j++){ let a=-Math.PI/2+(Math.PI*2/5)*j, tR=r+12, px=cx+Math.cos(a)*tR, py=cy+Math.sin(a)*tR; ctx.fillStyle=v[j]<=3?'#ff7351':'#9cff93'; ctx.fillText(L[j],px,py); }
+    document.getElementById('eRcl').innerText=v[1]; document.getElementById('eBuy').innerText=v[3]; document.getElementById('eSwg').innerText=v[2]; document.getElementById('ePan').innerText=v[0];
+}
+
+function drawCanvas() {
+    const cvs=document.getElementById('trajCanvas'), ctx=cvs.getContext('2d'), r=cvs.parentElement.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+    cvs.width=r.width*dpr; cvs.height=r.height*dpr; ctx.scale(dpr,dpr); const w=r.width, h=r.height; ctx.clearRect(0,0,w,h);
+    ctx.fillStyle='rgba(0,252,64,0.5)'; ctx.font='9px "Space Grotesk", monospace'; ctx.textAlign='center';
+    for(let i=1;i<10;i++){ let x=(w/10)*i; ctx.beginPath(); ctx.strokeStyle='rgba(73, 72, 71, 0.3)'; ctx.moveTo(x,15); ctx.lineTo(x,h); ctx.stroke(); ctx.fillText(i+'m',x,10); }
+    ctx.strokeStyle='rgba(255, 115, 81, 0.3)'; ctx.setLineDash([2,4]); ctx.beginPath(); ctx.moveTo(0,15); ctx.lineTo(w,15); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.strokeStyle='#00fc40'; ctx.lineWidth=2; ctx.moveTo(0,15); trajData.forEach(p=>ctx.lineTo((p.dist/10)*w, 15+(p.drop/100)*(h-30))); ctx.stroke();
+    window.cSnap=ctx.getImageData(0,0,cvs.width,cvs.height);
+}
+
+function updateScrubber() {
+    if(!trajData.length) return; const val=parseFloat(document.getElementById('distScrubber').value); document.getElementById('scrubDistTxt').innerText=val.toFixed(1);
+    let p=trajData.reduce((pr,cu)=>Math.abs(cu.dist-val)<Math.abs(pr.dist-val)?cu:pr);
+    document.getElementById('liveDrop').innerText=p.drop.toFixed(1); document.getElementById('liveSpeed').innerText=p.speed.toFixed(1); document.getElementById('liveEnergy').innerText=p.energy.toFixed(0);
+    if(val===4.0||Math.abs(val-4.0)<0.1){ document.getElementById('eEgy').innerText=p.energy.toFixed(0); document.getElementById('eDrp').innerText=p.drop.toFixed(1); }
+    const g=document.getElementById('aimGuideTxt');
+    if(p.energy<25){ g.innerText=t('aim_warn'); g.className="text-[9px] text-error uppercase mt-1 w-full truncate glow-text animate-pulse"; }
+    else{ g.className="text-[9px] text-primary uppercase mt-1 w-full truncate"; if(p.drop<=2.0) g.innerText=t('aim_0'); else if(p.drop<=7.0) g.innerText=t('aim_1'); else g.innerText=t('aim_2',(p.drop-7.0).toFixed(1)); }
+    const cvs=document.getElementById('trajCanvas'), ctx=cvs.getContext('2d'), w=cvs.width/(window.devicePixelRatio||1), h=cvs.height/(window.devicePixelRatio||1);
+    if(window.cSnap) ctx.putImageData(window.cSnap,0,0);
+    let px=(p.dist/10)*w, py=15+(p.drop/100)*(h-30);
+    ctx.beginPath(); ctx.setLineDash([2,2]); ctx.strokeStyle='#ff7351'; ctx.lineWidth=1; ctx.moveTo(px,15); ctx.lineTo(px,h); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(px,py,4,0,Math.PI*2); ctx.fillStyle='#ff7351'; ctx.fill();
+}
+
+function prepareExportData() {
+    const sel=id=>document.getElementById(id).options[document.getElementById(id).selectedIndex].text;
+    document.getElementById('expGun').innerText=`${document.getElementById('gunLen').value}CM / ${sel('sysType')} / ${sel('gunShape')}`;
+    document.getElementById('expWeight').innerText=`${document.getElementById('resWeight').innerText} KG`;
+    let ex=document.getElementById('sysType').value!=='standard'?` (EXT:${document.getElementById('extLen').value}CM)`:'';
+    document.getElementById('expBandModel').innerText=`${sel('bandBrand')} - ${sel('bandModel')}`;
+    document.getElementById('expBandData').innerText=`${document.getElementById('stretchRatioVal').innerText} / ${document.getElementById('resCutLen').innerText}${ex}`;
+    document.getElementById('expForce').innerText=document.getElementById('resForce').innerText + " KG";
+    document.getElementById('expShaft').innerText=`${document.getElementById('shaftLen').value}CM / ${sel('shaftDia')} / ${sel('flopperType')}`;
+    
+    document.getElementById('eRclOut').innerText=document.getElementById('eRcl').innerText; document.getElementById('eBuyOut').innerText=document.getElementById('eBuy').innerText;
+    document.getElementById('eSwgOut').innerText=document.getElementById('eSwg').innerText; document.getElementById('ePanOut').innerText=document.getElementById('ePan').innerText;
+    document.getElementById('eEgyOut').innerText=document.getElementById('eEgy').innerText; document.getElementById('eDrpOut').innerText=document.getElementById('eDrp').innerText;
+
+    document.getElementById('expRadarImg').src=document.getElementById('radarCanvas').toDataURL('image/png',1.0);
+    const sc=document.getElementById('expScoreVal'); sc.innerText=currentScore; sc.style.color=document.getElementById('resScore').classList.contains('text-error')?'#ff7351':'#00fc40';
+}
+
+function exportConfig() {
+    sysLog("INITIATING_EXPORT...");
+    if(typeof html2canvas==='undefined'){ sysLog("ERR: HTML2CANVAS_MISSING",true); return; }
+    const tg=document.getElementById('exportCanvas'); tg.style.left='0'; tg.style.top='0'; tg.style.zIndex='-1';
+    html2canvas(tg,{scale:2, backgroundColor:'#0e0e0e'}).then(c=>{
+        tg.style.left='-9999px'; const imgD=c.toDataURL('image/png');
+        if(/iPad|iPhone|iPod|MicroMessenger/i.test(navigator.userAgent)&&!window.MSStream){
+            const ov=document.createElement('div'); ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;';
+            const tp=document.createElement('div'); tp.innerText='LONG PRESS TO SAVE DATASHEET'; tp.className='text-primary font-bold mb-4 animate-pulse';
+            const ig=document.createElement('img'); ig.src=imgD; ig.style.cssText='max-width:90%;max-height:80%;border:2px solid #00fc40;box-shadow:0 0 20px rgba(0,252,64,0.3);';
+            ov.appendChild(tp); ov.appendChild(ig); ov.onclick=()=>document.body.removeChild(ov); document.body.appendChild(ov);
+        }else{ const l=document.createElement('a'); l.download=`MH_OPS_DAT_${new Date().getTime()}.png`; l.href=imgD; l.click(); }
+        sysLog("EXPORT_COMPLETE");
+    }).catch(e=>{ tg.style.left='-9999px'; sysLog("ERR: RENDER_FAILED",true); });
+}
+
+window.onload = initUI;
+</script>
+</body>
+</html>
